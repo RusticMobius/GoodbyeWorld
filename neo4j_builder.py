@@ -132,7 +132,7 @@ class GraphBuilder (object):
         self.write_nodes(self.ah,'案号')
         self.write_nodes(self.ajxz,'案件性质')
         self.write_nodes(self.ajlx,'案件类型')
-        self.write_nodes((self.ay,'案由'))
+        self.write_nodes(self.ay,'案由')
         self.write_nodes(self.ajjbqk,'案件基本情况')
         self.write_nodes(self.cpfxgc,'裁判分析过程')
         self.write_nodes(self.ft,'法条')
