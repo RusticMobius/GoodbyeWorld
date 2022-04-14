@@ -22,6 +22,7 @@ class GraphBuilder (object):
         self.ah = [] #案号
         self.ajxz = [] #案件性质
         self.ajlx = [] #案件类型
+        self.ay = [] #案由
         self.ajjbqk = [] #案件基本情况
         self.cpfxgc = [] #裁判分析过程
         self.ft = [] #法条
@@ -32,6 +33,7 @@ class GraphBuilder (object):
         self.rels_wsmc = []
         self.rels_ajxz = []
         self.rels_ajlx = []
+        self.rels_ay = []
         self.rels_ajjbqk = []
         self.rels_cpfxgc = []
         self.rels_ft = []
@@ -67,6 +69,10 @@ class GraphBuilder (object):
                 if (len(dict["裁判分析过程"]) != 0):
                     self.cpfxgc.append(dict["裁判分析过程"])
                     self.rels_cpfxgc.append([id,'裁判分析过程',dict["裁判分析过程"]])
+
+                if (len(dict["案由"]) != 0):
+                    self.ay.append(dict["案由"])
+                    self.rels_ay.append([id,'案由',dict["案由"]])
 
                 if (len(dict["裁判结果"]) != 0):
                     self.cpjg.append(dict["裁判结果"])
@@ -126,26 +132,18 @@ class GraphBuilder (object):
         self.write_nodes(self.ah,'案号')
         self.write_nodes(self.ajxz,'案件性质')
         self.write_nodes(self.ajlx,'案件类型')
+        self.write_nodes((self.ay,'案由'))
         self.write_nodes(self.ajjbqk,'案件基本情况')
         self.write_nodes(self.cpfxgc,'裁判分析过程')
         self.write_nodes(self.ft,'法条')
         self.write_nodes(self.cpjg,'裁判结果')
 
-
-        self.jbfy = [] #经办法院
-        self.wsmc = [] #文书名称
-        self.ah = [] #案号
-        self.ajxz = [] #案件性质
-        self.ajlx = [] #案件类型
-        self.ajjbqk = [] #案件基本情况
-        self.cpfxgc = [] #裁判分析过程
-        self.ft = [] #法条
-        self.cpjg = [] #裁判结果
     def create_relations(self):
         self.write_edges(self.rels_jbfy, '案号', '经办法院')
         self.write_edges(self.rels_wsmc, '案号', '文书名称')
         self.write_edges(self.rels_ajxz, '案号', '案件性质')
         self.write_edges(self.rels_ajlx, '案号', '案件类型')
+        self.write_edges(self.rels_ay,'案号','案由')
         self.write_edges(self.rels_ajjbqk,'案号','案件基本情况')
         self.write_edges(self.rels_cpfxgc,'案号','裁判分析过程')
         self.write_edges(self.rels_ft,'案号','法条')
@@ -167,4 +165,4 @@ if __name__ == '__main__':
     builder.event_extractor(path)
     builder.create_entitys()
     builder.create_relations()
-    builder.set_writ_attributes()
+    # builder.set_writ_attributes()

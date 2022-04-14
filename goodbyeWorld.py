@@ -59,8 +59,8 @@ def readXML(path):
         ssjl = collection.getElementsByTagName("SSJL")[0]
         try:
             ay = ssjl.getElementsByTagName("AY")[0].getAttribute("value")
-        except:
             data["案由"] = ay + ""
+        except:
             pass
     except:
         return
@@ -127,10 +127,10 @@ def initial():
                 data = readXML(file)
                 # print(data)
                 if (data):
+
                     data_list.append(data)
             except:
                 count += 1
-                print(path)
 
         d = json.dumps(data_list, indent=4, ensure_ascii=False)
         f.write(d)
