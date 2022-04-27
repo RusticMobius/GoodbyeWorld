@@ -53,8 +53,8 @@ def match_case_info():
         return "ERROR in getting caseInfo"
 
 
-@app.route('/matchCaseType', methods = ['post'])
-def match_case_type():
+@app.route('/matchCaseJudgement', methods = ['post'])
+def match_case_judgement():
     recv_data = request.args.get("info")
 
     if recv_data:
@@ -64,12 +64,21 @@ def match_case_type():
         id_list = cal_mini.predict(case_info)
         case_type_list = {}
         for id in id_list.keys():
-            quest = """MATCH (n:`案号`)-[r:`案由`]->(m:`案由`)
+            case_type_list[id] = {}
+            quest1 = """MATCH (n:`案号`)-[r:`裁判结果`]->(m:`裁判结果`)
                                                             WHERE n.name='{id}'
                                                             RETURN m""".format(id=id)
-            result = graph.run(quest).data()
-            for r in result:
-                case_type_list[id] = r['m']['name'] + "(相似度：" + id_list[id] + ")"
+            quest2 = """MATCH (n:`案号`)-[r:`案件基本情况`]->(m:`案件基本情况`)
+                                                            WHERE n.name='{id}'
+                                                            RETURN m""".format(id=id)
+            result1 = graph.run(quest1).data()
+            result2 = graph.run(quest2).data()
+            case_type_list[id]["相似度"] = id_list[id]
+            for r in result2:
+                case_type_list[id]["案件基本情况"] = r['m']['name']
+            for r in result1:
+                case_type_list[id]["裁判结果"] = r['m']['name']
+
 
         return case_type_list
 

@@ -30,17 +30,19 @@ train_dataset, dev_dataset, test_dataset = torchtext.legacy.data.TabularDataset.
     fields=[('index', None),('label', LABEL), ('content', TEXT)]  # 定义数据对应的表头
 )
 pretrained_name = 'sgns.renmin.bigram-char'
-pretrained_path = '/Users/wangxinyi/Downloads'
+pretrained_path = '/Users/scarlett/Downloads'
 vectors = torchtext.vocab.Vectors(name=pretrained_name, cache=pretrained_path)
 
 TEXT.build_vocab(train_dataset, dev_dataset, test_dataset, vectors=vectors)
 LABEL.build_vocab(train_dataset, dev_dataset, test_dataset)
 
+# print(train_dataset)
 train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
     (train_dataset, dev_dataset, test_dataset),  # 需要生成迭代器的数据集
     batch_sizes=(128, 128, 128),  # 每个迭代器分别以多少样本为一个batch
     sort_key=lambda x: len(x.content)  # 按什么顺序来排列batch，这里是以句子的长度，就是上面说的把句子长度相近的放在同一个batch里面
 )
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -172,7 +174,36 @@ def dev_eval(dev_iter, model):
                                                                        accuracy,
                                                                        corrects,
                                                                        size))
+
     return accuracy
+
+def predict(info):
+    model = TextCNN(class_num=class_num,
+                        filter_sizes=filter_size,
+                        filter_num=filter_num,
+                        vocabulary_size=vocab_size,
+                        embedding_dimension=embedding_dim,
+                        vectors=vectors,
+                        dropout=dropout)
+    model.load_state_dict(torch.load('model/bestmodel_steps200.pt'))
+    model.eval()
+    count = 0
+    for batch in dev_iter:
+        if count == 10:
+            break
+        feature, target = batch.content, batch.label
+        if torch.cuda.is_available():
+            feature, target = feature.cuda(), target.cuda()
+        logits = model(feature)
+        print(torch.max(logits, 1)[1])
+        print(torch.max(logits, 1)[1].view(target.size()).data)
+        print(target.size())
+        print(target)
+        print(target.data)
+        print("_____________________________")
+        count += 1
+
+#predict("SS")
 
 
 import os
@@ -187,4 +218,4 @@ def save(model, save_dir, steps):
     torch.save(model.state_dict(), save_bestmodel_path)
 
 
-train(train_iter, dev_iter, textcnn_model)
+# train(train_iter, dev_iter, textcnn_model)
