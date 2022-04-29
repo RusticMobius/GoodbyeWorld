@@ -12,6 +12,7 @@ app = Flask(__name__)
 graph = Graph('http://localhost:7474', auth = ('neo4j', '123456'))
 model = textcnn_model
 model.load_state_dict(torch.load('model1/bestmodel_steps320(b32).pt'))
+predict(model,"SOS")
 
 @app.after_request
 def cors(environ):
