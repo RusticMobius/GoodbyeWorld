@@ -1,4 +1,4 @@
-
+# -*- coding: UTF-8 -*-
 stopwords_path = 'stopwords.txt'
 stopwords = open(stopwords_path).read().split('\n')
 
@@ -11,38 +11,80 @@ def cut(sentence):
 
 import torch
 import torchtext
-# from torchtext import data, datasets
-from torchtext.legacy.data import Field
+from torchtext import data
+from torchtext.vocab import Vectors
+from torchtext.data import BucketIterator,Field,TabularDataset,LabelField
 
-# 声明一个Field对象，对象里面填的就是需要对文本进行哪些操作，比如这里lower=True英文大写转小写,tokenize=cut对于文本分词采用之前定义好的cut函数，sequence=True表示输入的是一个sequence类型的数据，还有其他更多操作可以参考文档
-TEXT = torchtext.legacy.data.Field(sequential=True, lower=True, tokenize=cut) # , fix_length=300
-# 声明一个标签的LabelField对象，sequential=False表示标签不是sequence，dtype=torch.int64标签转化成整形
-LABEL = torchtext.legacy.data.Field(sequential=False, dtype=torch.int64)
+TEXT = Field(sequential=True, lower=True, tokenize=cut)
+LABEL = LabelField(sequential=False,use_vocab=True,is_target=True)
 
+field = [('id',None),('label',LABEL),('content',TEXT)]
 # 这里主要是告诉torchtext需要处理哪些数据，这些数据存放在哪里，TabularDataset是一个处理scv/tsv的常用类
-train_dataset, dev_dataset, test_dataset = torchtext.legacy.data.TabularDataset.splits(
-    path='./data',  # 文件存放路径
-    format='tsv',  # 文件格式
-    skip_header=False,  # 是否跳过表头，我这里数据集中没有表头，所以不跳过
-    train='train_data.tsv',
-    validation='dev_data.tsv',
-    test='test_data.tsv',
-    fields=[('index', None),('label', LABEL), ('content', TEXT)]  # 定义数据对应的表头
+train_data = TabularDataset(
+    path="./data2/train_data.tsv",
+    format="tsv",
+    skip_header=False,
+    # csv_reader_params={'delimiter':'\t'},
+    fields=field
 )
+dev_data = TabularDataset(
+    path="./data2/dev_data.tsv",
+    format="tsv",
+    skip_header=False,
+    # csv_reader_params={'delimiter':'\t'},
+    fields=field
+)
+test_data = TabularDataset(
+    path="./data2/test_data.tsv",
+    format="tsv",
+    skip_header=False,
+    # csv_reader_params={'delimiter':'\t'},
+    fields=field
+)
+# train_dataset, dev_dataset, test_dataset = torchtext.legacy.data.TabularDataset.splits(
+#     path='./data2',  # 文件存放路径
+#     format='tsv',  # 文件格式
+#     skip_header=False,  # 是否跳过表头，我这里数据集中没有表头，所以不跳过
+#     train='train_data.tsv',
+#     validation='dev_data.tsv',
+#     test='test_data.tsv',
+#     fields=[('index', None),('label', LABEL), ('content', TEXT)]  # 定义数据对应的表头
+#
+# )
+
+
 pretrained_name = 'sgns.renmin.bigram-char'
 pretrained_path = '/Users/scarlett/Downloads'
 vectors = torchtext.vocab.Vectors(name=pretrained_name, cache=pretrained_path)
 
-TEXT.build_vocab(train_dataset, dev_dataset, test_dataset, vectors=vectors)
-LABEL.build_vocab(train_dataset, dev_dataset, test_dataset)
+TEXT.build_vocab(train_data, dev_data,test_data, vectors=vectors)
+LABEL.build_vocab(train_data, dev_data, test_data)
+label_list = LABEL.vocab.itos
 
-# print(train_dataset)
-train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
-    (train_dataset, dev_dataset, test_dataset),  # 需要生成迭代器的数据集
-    batch_sizes=(128, 128, 128),  # 每个迭代器分别以多少样本为一个batch
-    sort_key=lambda x: len(x.content)  # 按什么顺序来排列batch，这里是以句子的长度，就是上面说的把句子长度相近的放在同一个batch里面
+train_iter = BucketIterator(
+    dataset=train_data,
+    batch_size=32,
+    sort_key=lambda x: len(x.content),
+    sort_within_batch=True,
+    device=torch.device('cpu')
+
 )
+dev_iter = BucketIterator(
+    dataset=dev_data,
+    batch_size=128,
+    sort_key=lambda x: len(x.content),
+    sort_within_batch=True,
+    device=torch.device('cpu')
 
+)
+test_iter = BucketIterator(
+    dataset=test_data,
+    batch_size=1,
+    sort_key=lambda x: len(x.content),
+    sort_within_batch=True,
+    device=torch.device('cpu')
+
+)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -99,9 +141,9 @@ vectors = TEXT.vocab.vectors  # 词向量
 dropout = 0.5
 learning_rate = 0.001  # 学习率
 epochs = 5  # 迭代次数
-save_dir = './model'  # 模型保存路径
+save_dir = './model1'  # 模型保存路径
 steps_show = 1  # 每10步查看一次训练集loss和mini batch里的准确率
-steps_eval = 100  # 每100步测试一下验证集的准确率
+steps_eval = 32  # 每100步测试一下验证集的准确率
 early_stopping = 2000  # 若发现当前验证集的准确率在1000步训练之后不再提高 一直小于best_acc,则提前停止训练
 
 textcnn_model = TextCNN(class_num=class_num,
@@ -154,12 +196,14 @@ def train(train_iter, dev_iter, model):
                         print('\n提前停止于 {} steps, acc: {:.4f}%'.format(last_step, best_acc))
                         raise KeyboardInterrupt
 
+# textcnn_model.load_state_dict(torch.load('model1/bestmodel_steps288(b32).pt'))
 
 def dev_eval(dev_iter, model):
     model.eval()
     corrects, avg_loss = 0, 0
     for batch in dev_iter:
         feature, target = batch.content, batch.label
+        #print(target)
         if torch.cuda.is_available():
             feature, target = feature.cuda(), target.cuda()
         logits = model(feature)
@@ -177,34 +221,6 @@ def dev_eval(dev_iter, model):
 
     return accuracy
 
-def predict(info):
-    model = TextCNN(class_num=class_num,
-                        filter_sizes=filter_size,
-                        filter_num=filter_num,
-                        vocabulary_size=vocab_size,
-                        embedding_dimension=embedding_dim,
-                        vectors=vectors,
-                        dropout=dropout)
-    model.load_state_dict(torch.load('model/bestmodel_steps200.pt'))
-    model.eval()
-    count = 0
-    for batch in dev_iter:
-        if count == 10:
-            break
-        feature, target = batch.content, batch.label
-        if torch.cuda.is_available():
-            feature, target = feature.cuda(), target.cuda()
-        logits = model(feature)
-        print(torch.max(logits, 1)[1])
-        print(torch.max(logits, 1)[1].view(target.size()).data)
-        print(target.size())
-        print(target)
-        print(target.data)
-        print("_____________________________")
-        count += 1
-
-#predict("SS")
-
 
 import os
 
@@ -213,9 +229,50 @@ import os
 def save(model, save_dir, steps):
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
-    save_path = 'bestmodel_steps{}.pt'.format(steps)
+    save_path = 'bestmodel_steps{}(b32).pt'.format(steps)
     save_bestmodel_path = os.path.join(save_dir, save_path)
     torch.save(model.state_dict(), save_bestmodel_path)
 
+#train(train_iter, dev_iter, textcnn_model)
+#dev_eval(dev_iter,textcnn_model)
 
-# train(train_iter, dev_iter, textcnn_model)
+textcnn_model.load_state_dict(torch.load('model1/bestmodel_steps320(b32).pt'))
+
+import csv
+
+
+def predict(info):
+    f = open("./data2/temp_input.tsv", 'w')
+    writer = csv.writer(f, delimiter='\t')
+    writer.writerow([0, '离婚纠纷', info])
+    f.close()
+
+    textcnn_model.eval()
+
+    test_data = TabularDataset(
+        path="./data2/temp_input.tsv",
+        format="tsv",
+        skip_header=False,
+        fields=field
+    )
+
+    test_iter = BucketIterator(
+        dataset=test_data,
+        batch_size=1,
+        sort_key=lambda x: len(x.content),
+        sort_within_batch=True,
+        device=torch.device('cpu')
+    )
+
+    label = "SOS"
+    for batch in test_iter:
+        # count += 1
+        feature = batch.content
+        logits = textcnn_model(feature)
+        #print(target)
+        label = label_list[torch.max(logits, 1)[1].detach().numpy()[0]]
+
+    return label
+
+
+

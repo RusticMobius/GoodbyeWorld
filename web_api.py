@@ -3,6 +3,7 @@ import flask
 import json
 import cal_mini
 import sim_data_process
+import causeClassify
 from flask import Flask, jsonify, request
 from py2neo import Graph
 
@@ -109,6 +110,14 @@ def match_legal_item():
     else:
         print("receive None")
         return "ERROR in getting legalItem"
+
+@app.route('/matchCauseType', methods = ['post'])
+def match_cause_type():
+    recv_data = request.args.get("info")
+    if recv_data:
+        print(recv_data)
+        cause_type = causeClassify.predict(recv_data)
+    return cause_type
 
 
 app.run(host='localhost', port=8802, debug=True)
