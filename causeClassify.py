@@ -236,12 +236,12 @@ def save(model, save_dir, steps):
 #train(train_iter, dev_iter, textcnn_model)
 #dev_eval(dev_iter,textcnn_model)
 
-textcnn_model.load_state_dict(torch.load('model1/bestmodel_steps320(b32).pt'))
 
 import csv
 
 
-def predict(info):
+def predict(model,info):
+    model.eval()
     f = open("./data2/temp_input.tsv", 'w')
     writer = csv.writer(f, delimiter='\t')
     writer.writerow([0, '离婚纠纷', info])
@@ -268,7 +268,7 @@ def predict(info):
     for batch in test_iter:
         # count += 1
         feature = batch.content
-        logits = textcnn_model(feature)
+        logits = model(feature)
         #print(target)
         label = label_list[torch.max(logits, 1)[1].detach().numpy()[0]]
 

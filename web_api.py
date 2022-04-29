@@ -3,12 +3,15 @@ import flask
 import json
 import cal_mini
 import sim_data_process
-import causeClassify
+from causeClassify import predict,textcnn_model
+import torch
 from flask import Flask, jsonify, request
 from py2neo import Graph
 
 app = Flask(__name__)
 graph = Graph('http://localhost:7474', auth = ('neo4j', '123456'))
+model = textcnn_model
+model.load_state_dict(torch.load('model1/bestmodel_steps320(b32).pt'))
 
 @app.after_request
 def cors(environ):
@@ -116,7 +119,7 @@ def match_cause_type():
     recv_data = request.args.get("info")
     if recv_data:
         print(recv_data)
-        cause_type = causeClassify.predict(recv_data)
+        cause_type = predict(model,recv_data)
     return cause_type
 
 
