@@ -3,38 +3,47 @@ import flask
 import json
 import cal_mini
 import sim_data_process
-from causeClassify import predict,textcnn_model
+from causeClassify import predict, textcnn_model
 import torch
 from flask import Flask, jsonify, request
 from py2neo import Graph
+from flask_cors import CORS
 
 app = Flask(__name__)
-graph = Graph('http://localhost:7474', auth = ('neo4j', '123456'))
+graph = Graph('http://localhost:7474', auth=('neo4j', '123456'))
 model = textcnn_model
 model.load_state_dict(torch.load('model1/bestmodel_steps320(b32).pt'))
-predict(model,"SOS")
+predict(model, "SOS")
+
+# CORS(app, supports_credentials=True)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type,token'
+
 
 @app.after_request
 def cors(environ):
-    environ.headers['Access-Control-Allow-Origin']='*'
-    environ.headers['Access-Control-Allow-Method']='*'
-    environ.headers['Access-Control-Allow-Headers']='x-requested-with,content-type'
+    environ.headers['Access-Control-Allow-Credentials'] = 'true'
+    environ.headers['Access-Control-Allow-Origin'] = request.environ['HTTP_ORIGIN']
+    environ.headers['Access-Control-Allow-Method'] = '*'
+    environ.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Requested-With,token'
     return environ
 
-@app.route('/calculateSimiliarity', methods = ['post'])
-def calculate_similarity():
-    recv_data = request.args.get("info")
 
-    if recv_data:
-        print(recv_data)
-        case_info = sim_data_process.stop_words_filter(recv_data)
-        return cal_mini.predict(case_info)
-    else:
-        print("receive None")
-        return "ERROR"
+# @app.route('/calculateSimiliarity', methods=['post'])
+# def calculate_similarity():
+#     recv_data = request.args.get("info")
+#
+#
+#     if recv_data:
+#         print(recv_data)
+#         case_info = sim_data_process.stop_words_filter(recv_data)
+#         return cal_mini.predict(case_info)
+#     else:
+#         print("receive None")
+#         return "ERROR"
 
 
-@app.route('/matchCaseInfo', methods = ['post'])
+@app.route('/matchCaseInfo', methods=['post'])
 def match_case_info():
     recv_data = request.args.get("info")
 
@@ -58,7 +67,7 @@ def match_case_info():
         return "ERROR in getting caseInfo"
 
 
-@app.route('/matchCaseJudgement', methods = ['post'])
+@app.route('/matchCaseJudgement', methods=['post'])
 def match_case_judgement():
     recv_data = request.args.get("info")
 
@@ -84,7 +93,6 @@ def match_case_judgement():
             for r in result1:
                 case_type_list[id]["裁判结果"] = r['m']['name']
 
-
         return case_type_list
 
     else:
@@ -92,7 +100,7 @@ def match_case_judgement():
         return "ERROR in getting caseType"
 
 
-@app.route('/matchLegalItem', methods = ['post'])
+@app.route('/matchLegalItem', methods=['post'])
 def match_legal_item():
     recv_data = request.args.get("info")
 
@@ -115,12 +123,14 @@ def match_legal_item():
         print("receive None")
         return "ERROR in getting legalItem"
 
-@app.route('/matchCauseType', methods = ['post'])
+
+@app.route('/matchCauseType', methods=['post'])
 def match_cause_type():
     recv_data = request.args.get("info")
     if recv_data:
-        print(recv_data)
-        cause_type = predict(model,recv_data)
+        # print(recv_data)
+        cause_type = predict(model, recv_data)
+        print(cause_type)
     return cause_type
 
 
