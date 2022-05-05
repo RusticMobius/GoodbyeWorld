@@ -4,29 +4,28 @@ from tqdm import tqdm
 import threading
 
 
-
-class GraphBuilder (object):
+class GraphBuilder(object):
     def __init__(self):
         super(GraphBuilder, self).__init__()
         self.graph = Graph(
-            host=  "127.0.0.1",
-            http_port = 7474,
-            user = "neo4j",
-            password = "123456"
+            host="127.0.0.1",
+            http_port=7474,
+            user="neo4j",
+            password="123456"
         )
 
         self.writ_infos = []
-        #节点
-        self.jbfy = [] #经办法院
-        self.wsmc = [] #文书名称
-        self.ah = [] #案号
-        self.ajxz = [] #案件性质
-        self.ajlx = [] #案件类型
-        self.ay = [] #案由
-        self.ajjbqk = [] #案件基本情况
-        self.cpfxgc = [] #裁判分析过程
-        self.ft = [] #法条
-        self.cpjg = [] #裁判结果
+        # 节点
+        self.jbfy = []  # 经办法院
+        self.wsmc = []  # 文书名称
+        self.ah = []  # 案号
+        self.ajxz = []  # 案件性质
+        self.ajlx = []  # 案件类型
+        self.ay = []  # 案由
+        self.ajjbqk = []  # 案件基本情况
+        self.cpfxgc = []  # 裁判分析过程
+        self.ft = []  # 法条
+        self.cpjg = []  # 裁判结果
 
         # 关系
         self.rels_jbfy = []
@@ -46,47 +45,46 @@ class GraphBuilder (object):
                 id = str(dict["案号"])
                 self.ah.append(id)
 
-                if(len(dict["经办法院"])!=0):
+                if len(dict["经办法院"]) != 0:
                     self.jbfy.append(dict["经办法院"])
-                    self.rels_jbfy.append([id,'经办法院',dict["经办法院"]])
+                    self.rels_jbfy.append([id, '经办法院', dict["经办法院"]])
 
-                if (len(dict["文书名称"]) != 0):
+                if len(dict["文书名称"]) != 0:
                     self.wsmc.append(dict["文书名称"])
-                    self.rels_wsmc.append([id,"文书名称",dict["文书名称"]])
+                    self.rels_wsmc.append([id, "文书名称", dict["文书名称"]])
 
-                if (len(dict["案件性质"]) != 0):
+                if len(dict["案件性质"]) != 0:
                     self.ajxz.append(dict["案件性质"])
-                    self.rels_ajxz.append([id,"案件性质",dict["案件性质"]])
+                    self.rels_ajxz.append([id, "案件性质", dict["案件性质"]])
 
-                if (len(dict["案件类型"]) != 0):
+                if len(dict["案件类型"]) != 0:
                     self.ajlx.append(dict["案件类型"])
-                    self.rels_ajlx.append([id,'案件类型',dict["案件类型"]])
+                    self.rels_ajlx.append([id, '案件类型', dict["案件类型"]])
 
-                if (len(dict["案件基本情况"]) != 0):
+                if len(dict["案件基本情况"]) != 0:
                     self.ajjbqk.append(dict["案件基本情况"])
-                    self.rels_ajjbqk.append([id,'案件基本情况',dict["案件基本情况"]])
+                    self.rels_ajjbqk.append([id, '案件基本情况', dict["案件基本情况"]])
 
-                if (len(dict["裁判分析过程"]) != 0):
+                if len(dict["裁判分析过程"]) != 0:
                     self.cpfxgc.append(dict["裁判分析过程"])
-                    self.rels_cpfxgc.append([id,'裁判分析过程',dict["裁判分析过程"]])
+                    self.rels_cpfxgc.append([id, '裁判分析过程', dict["裁判分析过程"]])
 
-                if (len(dict["案由"]) != 0):
+                if len(dict["案由"]) != 0:
                     self.ay.append(dict["案由"])
-                    self.rels_ay.append([id,'案由',dict["案由"]])
+                    self.rels_ay.append([id, '案由', dict["案由"]])
 
-                if (len(dict["裁判结果"]) != 0):
+                if len(dict["裁判结果"]) != 0:
                     self.cpjg.append(dict["裁判结果"])
-                    self.rels_cpjg.append([id,"裁判结果",dict["裁判结果"]])
+                    self.rels_cpjg.append([id, "裁判结果", dict["裁判结果"]])
 
                 for j in dict["法条"]:
                     self.ft.append(j)
-                    self.rels_ft.append([id,"法条",j])
+                    self.rels_ft.append([id, "法条", j])
 
                 self.writ_infos.append(dict)
 
-
-    def write_nodes(self,entitys,entity_type):
-        for node in tqdm(entitys,ncols=80):
+    def write_nodes(self, entitys, entity_type):
+        for node in tqdm(entitys, ncols=80):
             cql = """MERGE(n:{label}{{name:'{entity_name}'}})""".format(
                 label=entity_type, entity_name=node.replace("'", ""))
             try:
@@ -106,8 +104,7 @@ class GraphBuilder (object):
                 self.graph.run(cql)
             except Exception as e:
                 print(e)
-               # print(cql)
-
+            # print(cql)
 
     def set_attributes(self, entity_infos, etype):
         print("写入 {0} 实体的属性".format(etype))
@@ -118,7 +115,7 @@ class GraphBuilder (object):
 
                 cql = """MATCH (n:{label})
                                         WHERE n.name='{name}'
-                                        set n.{k}={v}""".format(label=etype, name=id.replace("'",""), k=k, v=v)
+                                        set n.{k}={v}""".format(label=etype, name=id.replace("'", ""), k=k, v=v)
 
                 try:
                     self.graph.run(cql)
@@ -127,29 +124,27 @@ class GraphBuilder (object):
                     # print(cql)
 
     def create_entitys(self):
-        self.write_nodes(self.jbfy,'经办法院')
-        self.write_nodes(self.wsmc,'文书名称')
-        self.write_nodes(self.ah,'案号')
-        self.write_nodes(self.ajxz,'案件性质')
-        self.write_nodes(self.ajlx,'案件类型')
-        self.write_nodes(self.ay,'案由')
-        self.write_nodes(self.ajjbqk,'案件基本情况')
-        self.write_nodes(self.cpfxgc,'裁判分析过程')
-        self.write_nodes(self.ft,'法条')
-        self.write_nodes(self.cpjg,'裁判结果')
+        self.write_nodes(self.jbfy, '经办法院')
+        self.write_nodes(self.wsmc, '文书名称')
+        self.write_nodes(self.ah, '案号')
+        self.write_nodes(self.ajxz, '案件性质')
+        self.write_nodes(self.ajlx, '案件类型')
+        self.write_nodes(self.ay, '案由')
+        self.write_nodes(self.ajjbqk, '案件基本情况')
+        self.write_nodes(self.cpfxgc, '裁判分析过程')
+        self.write_nodes(self.ft, '法条')
+        self.write_nodes(self.cpjg, '裁判结果')
 
     def create_relations(self):
         self.write_edges(self.rels_jbfy, '案号', '经办法院')
         self.write_edges(self.rels_wsmc, '案号', '文书名称')
         self.write_edges(self.rels_ajxz, '案号', '案件性质')
         self.write_edges(self.rels_ajlx, '案号', '案件类型')
-        self.write_edges(self.rels_ay,'案号','案由')
-        self.write_edges(self.rels_ajjbqk,'案号','案件基本情况')
-        self.write_edges(self.rels_cpfxgc,'案号','裁判分析过程')
-        self.write_edges(self.rels_ft,'案号','法条')
-        self.write_edges(self.rels_cpjg,'案号','裁判结果')
-
-
+        self.write_edges(self.rels_ay, '案号', '案由')
+        self.write_edges(self.rels_ajjbqk, '案号', '案件基本情况')
+        self.write_edges(self.rels_cpfxgc, '案号', '裁判分析过程')
+        self.write_edges(self.rels_ft, '案号', '法条')
+        self.write_edges(self.rels_cpjg, '案号', '裁判结果')
 
     def set_writ_attributes(self):
         # self.set_attributes(self.disease_infos,"疾病")
@@ -159,7 +154,6 @@ class GraphBuilder (object):
 
 
 if __name__ == '__main__':
-
     path = 'selected_data.json'
     builder = GraphBuilder()
     builder.event_extractor(path)

@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+
 stopwords_path = 'stopwords.txt'
 stopwords = open(stopwords_path).read().split('\n')
 
@@ -13,12 +14,12 @@ import torch
 import torchtext
 from torchtext import data
 from torchtext.vocab import Vectors
-from torchtext.data import BucketIterator,Field,TabularDataset,LabelField
+from torchtext.data import BucketIterator, Field, TabularDataset, LabelField
 
 TEXT = Field(sequential=True, lower=True, tokenize=cut)
-LABEL = LabelField(sequential=False,use_vocab=True,is_target=True)
+LABEL = LabelField(sequential=False, use_vocab=True, is_target=True)
 
-field = [('id',None),('label',LABEL),('content',TEXT)]
+field = [('id', None), ('label', LABEL), ('content', TEXT)]
 # 这里主要是告诉torchtext需要处理哪些数据，这些数据存放在哪里，TabularDataset是一个处理scv/tsv的常用类
 train_data = TabularDataset(
     path="./data2/train_data.tsv",
@@ -54,10 +55,10 @@ test_data = TabularDataset(
 
 
 pretrained_name = 'sgns.renmin.bigram-char'
-pretrained_path = '/Users/scarlett/Downloads'
+pretrained_path = '/Users/wangxinyi/Downloads'
 vectors = torchtext.vocab.Vectors(name=pretrained_name, cache=pretrained_path)
 
-TEXT.build_vocab(train_data, dev_data,test_data, vectors=vectors)
+TEXT.build_vocab(train_data, dev_data, test_data, vectors=vectors)
 LABEL.build_vocab(train_data, dev_data, test_data)
 label_list = LABEL.vocab.itos
 
@@ -175,7 +176,7 @@ def train(train_iter, dev_iter, model):
             loss.backward()  # 反向传播
             optimizer.step()  # 放在loss.backward()后进行参数的更新
             steps += 1
-            if steps % steps_show == 0:  # 每训练多少步计算一次准确率，我这边是1，可以自己修改
+            if steps % steps_show == 0:
                 corrects = (torch.max(logits, 1)[1].view(
                     target.size()).data == target.data).sum()  # logits是[128,10],torch.max(logits, 1)也就是选出第一维中概率最大的值，输出为[128,1],torch.max(logits, 1)[1]相当于把每一个样本的预测输出取出来，然后通过view(target.size())平铺成和target一样的size (128,),然后把与target中相同的求和，统计预测正确的数量
                 train_acc = 100.0 * corrects / batch.batch_size  # 计算每个mini batch中的准确率
@@ -196,6 +197,7 @@ def train(train_iter, dev_iter, model):
                         print('\n提前停止于 {} steps, acc: {:.4f}%'.format(last_step, best_acc))
                         raise KeyboardInterrupt
 
+
 # textcnn_model.load_state_dict(torch.load('model1/bestmodel_steps288(b32).pt'))
 
 def dev_eval(dev_iter, model):
@@ -203,7 +205,7 @@ def dev_eval(dev_iter, model):
     corrects, avg_loss = 0, 0
     for batch in dev_iter:
         feature, target = batch.content, batch.label
-        #print(target)
+        # print(target)
         if torch.cuda.is_available():
             feature, target = feature.cuda(), target.cuda()
         logits = model(feature)
@@ -233,14 +235,15 @@ def save(model, save_dir, steps):
     save_bestmodel_path = os.path.join(save_dir, save_path)
     torch.save(model.state_dict(), save_bestmodel_path)
 
-#train(train_iter, dev_iter, textcnn_model)
-#dev_eval(dev_iter,textcnn_model)
+
+# train(train_iter, dev_iter, textcnn_model)
+# dev_eval(dev_iter,textcnn_model)
 
 
 import csv
 
 
-def predict(model,info):
+def predict(model, info):
     model.eval()
     f = open("./data2/temp_input.tsv", 'w')
     writer = csv.writer(f, delimiter='\t')
@@ -269,10 +272,7 @@ def predict(model,info):
         # count += 1
         feature = batch.content
         logits = model(feature)
-        #print(target)
+        # print(target)
         label = label_list[torch.max(logits, 1)[1].detach().numpy()[0]]
 
     return label
-
-
-
