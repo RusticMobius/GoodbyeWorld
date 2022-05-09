@@ -142,6 +142,8 @@ def train(model, train_iter, dev_iter):
                         print('\n提前停止于 {} steps, acc: {:.4f}%'.format(last_step, best_acc))
                         raise KeyboardInterrupt
 
+from sklearn.metrics import classification_report
+
 def dev_eval(dev_iter, model):
     model.eval()
     corrects, avg_loss = 0, 0
@@ -152,6 +154,7 @@ def dev_eval(dev_iter, model):
             feature, target = feature.cuda(), target.cuda()
         logits = model(feature)
         loss = F.cross_entropy(logits, target)
+        print(classification_report(logits,target))
         avg_loss += loss.item()
         corrects += (torch.max(logits, 1)
                      [1].view(target.size()).data == target.data).sum()
@@ -239,4 +242,6 @@ dpcnn_model = DPCNN(class_num=config.class_num,
                     dropout=config.dropout
 )
 
-train(dpcnn_model,train_iter,dev_iter)
+dpcnn_model.load_state_dict(torch.load('model3/DPCNN_model_steps300(b64).pt'))
+# train(dpcnn_model,train_iter,dev_iter)
+dev_eval(dev_iter,dpcnn_model)
