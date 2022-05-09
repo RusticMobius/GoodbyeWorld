@@ -27,7 +27,7 @@
         </a-button>
       </a-input-search>
       <div id="menu">
-        <a-radio-group v-model="type" @change="select" button-style="solid">
+        <a-radio-group v-model="qType" @change="select" button-style="solid">
           <a-radio-button value="1" style="width: 16vw;">纠纷类型判断</a-radio-button>
           <a-radio-button value="2" style="width: 16vw;">相关法条推荐</a-radio-button>
           <a-radio-button value="3" style="width: 16vw;">判决结果预测</a-radio-button>
@@ -56,7 +56,7 @@
         spinning: false,
         lastTime: {},
         content: '',
-        type: 0,
+        qType: 0,
 
       };
     },
@@ -69,17 +69,6 @@
       ])
     },
     async mounted() {
-      // if()
-
-      let urlstr = window.location.href;
-      let question = "";
-      if (urlstr.indexOf('?') !== -1) {//有参数
-        question = this.$route.query.question;
-        console.log("question: " + question);
-        this.asking(question)
-      }
-
-
       let box = document.getElementsByClassName('scroll-wrapper')[0];
       box.scrollTop = box.scrollHeight;
       this.lastTime = this.chatMessages[this.chatMessages.length - 1].timestamp;
@@ -98,8 +87,7 @@
         'set_qType'
       ]),
       select(e) {
-        this.type = e.target.value;
-        // console.log(e.target.value)
+        this.qType = e.target.value;
         this.set_qType(e.target.value);
         this.chatMessages.push({
           type: 1,
@@ -107,12 +95,10 @@
           key: this.chatMessages.length,
           from: 2,
           timestamp: new Date(),
-          // displayedTime: time,
           name: this.name
         });
       },
       async asking(e) {
-        this.carList = [];
         let time = (parseInt(new Date() - this.lastTime) / 1000 / 60) <= 3
           ? '' : new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
         if (e !== '') {
@@ -130,13 +116,14 @@
         this.spinning = true;
         this.content = '';
 
-        let answer = await this.question(e);
-        console.log(answer)
-        // let answer = "对不起，我不知道你在说什么..."
-        // if (answer.state === 'SUCCESS') {
-        //   this.carList = answer.carList;
-        // }
-        // answer.answer = answer.answer.replaceAll('\n','<br/>');
+        let answer;
+        if(this.qType!=0){
+          answer = await this.question(e);
+        }
+        else{
+          answer = "抱歉，您还未选择问题类型，请先在输入框下方选择。"
+        }
+        answer = answer.replaceAll('\n','<br/>');
         // answer.answer = answer.answer.replaceAll('null','');
         this.chatMessages.push({
           type: 1,

@@ -64,12 +64,13 @@
     flex-direction: row;
 
     .message-wrapper {
-      max-width: 420px;
+      max-width: 50vw;
       /*display: block;*/
 
       margin: 0px 10px 0px 10px;
 
       .message {
+        text-align: left;
         margin: 6px 10px 6px 10px;
         font-size: 15px;
         word-wrap: break-word; //英文换行

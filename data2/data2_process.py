@@ -61,4 +61,41 @@ def label_dataset():
         for e in example:
             writer.writerow(e)
 
-label_dataset()
+import jieba
+def seg_dataset_process():
+    stopwords1 = [line.rstrip() for line in
+                  open('/Users/scarlett/PycharmProjects/GoodbyeWorld/stopwords/stopwords-master/baidu_stopwords.txt', 'r', encoding='utf-8')]
+    stopwords2 = [line.rstrip() for line in
+                  open('/Users/scarlett/PycharmProjects/GoodbyeWorld/stopwords/stopwords-master/cn_stopwords.txt', 'r', encoding='utf-8')]
+    stopwords3 = [line.rstrip() for line in
+                  open('/Users/scarlett/PycharmProjects/GoodbyeWorld/stopwords/stopwords-master/hit_stopwords.txt', 'r', encoding='utf-8')]
+    stopwords4 = [line.rstrip() for line in
+                  open('/Users/scarlett/PycharmProjects/GoodbyeWorld/stopwords/stopwords-master/scu_stopwords.txt', 'r', encoding='utf-8')]
+    stopwords = stopwords1 + stopwords2 + stopwords3 + stopwords4
+    f_train = open('train_data.tsv','r')
+    f_test = open('test_data.tsv','r')
+    train_set = open('train_seg_data.csv','w')
+    test_set = open('test_seg_data.csv','w')
+
+    reader1 = csv.reader(f_train,delimiter='\t')
+    reader2 = csv.reader(f_test,delimiter='\t')
+
+    writer1 = csv.writer(train_set,delimiter='\t')
+    writer2 = csv.writer(test_set,delimiter='\t')
+
+    for r1 in reader1:
+        content = ''
+        words = jieba.cut(r1[2])
+        for w in words:
+            if w not in stopwords:
+                content = content + w + ' '
+        writer1.writerow([r1[1], content.strip()])
+    for r2 in reader2:
+        content = ''
+        words = jieba.cut(r2[2])
+        for w in words:
+            if w not in stopwords:
+                content = content + w + ' '
+        writer2.writerow([r2[1], content.strip()])
+
+seg_dataset_process()

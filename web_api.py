@@ -3,7 +3,7 @@ import flask
 import json
 import cal_mini
 import sim_data_process
-from causeClassify import predict, textcnn_model
+from textcnnClassify import predict, textcnn_model
 import torch
 from flask import Flask, jsonify, request
 from py2neo import Graph
