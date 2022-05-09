@@ -2,6 +2,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import log_loss
+import numpy as np
 
 def load_stopwords():
     stopwords1 = [line.rstrip() for line in
@@ -40,9 +43,19 @@ def train():
     # bow = TfidfVectorizer(stop_words=load_stopwords(), max_df=0.35, min_df=0.035,ngram_range=(1,2),max_features=2500) 0.7532956685499058
     x_train = bow.fit_transform(x_train)
     x_test = bow.transform(x_test)
-    print(bow.vocabulary_)
+    # print(bow.vocabulary_)
     clf = MultinomialNB()
     clf.fit(x_train,y_train)
     score = clf.score(x_test,y_test)
+    pred = clf.predict(x_test)
     print(score)
+    one_hot_encoder = OneHotEncoder(sparse=False)
+    y_test = np.array(y_test).reshape(-1,1)
+    pred = np.array(pred).reshape(-1,1)
+
+    y_true = one_hot_encoder.fit_transform(y_test)
+    y_pred = one_hot_encoder.fit_transform(pred)
+    print(y_true)
+    print(y_pred)
+    print(log_loss(y_true, y_pred))
 train()

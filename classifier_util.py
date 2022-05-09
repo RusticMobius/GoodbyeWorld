@@ -99,7 +99,7 @@ epochs_num = 10
 steps_show = 1  # 每10步查看一次训练集loss和mini batch里的准确率
 steps_eval = 100  # 每100步测试一下验证集的准确率
 early_stopping = 2000  # 若发现当前验证集的准确率在1000步训练之后不再提高 一直小于best_acc,则提前停止训练
-save_dir = './model3'  # 模型保存路径
+save_dir = './model'  # 模型保存路径
 
 def train(model, train_iter, dev_iter):
     best_acc = 0
@@ -142,38 +142,73 @@ def train(model, train_iter, dev_iter):
                         print('\n提前停止于 {} steps, acc: {:.4f}%'.format(last_step, best_acc))
                         raise KeyboardInterrupt
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, classification_report, confusion_matrix
+from sklearn.metrics import roc_curve,auc
+import matplotlib.pyplot as plt
 
 def dev_eval(dev_iter, model):
-    model.eval()
-    corrects, avg_loss = 0, 0
-    for batch in dev_iter:
-        feature, target = batch.content, batch.label
-        # print(target)
-        if torch.cuda.is_available():
-            feature, target = feature.cuda(), target.cuda()
-        logits = model(feature)
-        loss = F.cross_entropy(logits, target)
-        print(classification_report(logits,target))
-        avg_loss += loss.item()
-        corrects += (torch.max(logits, 1)
-                     [1].view(target.size()).data == target.data).sum()
-    size = len(dev_iter.dataset)
-    avg_loss /= size
-    accuracy = 100.0 * corrects / size
-    print('\nEvaluation - loss: {:.6f}  acc: {:.4f}%({}/{}) \n'.format(avg_loss,
-                                                                       accuracy,
-                                                                       corrects,
-                                                                       size))
+    with torch.no_grad():
+        model.eval()
+        corrects, avg_loss = 0, 0
+        preds_list = []
+        target_list = []
+        for batch in dev_iter:
+            feature, target = batch.content, batch.label
+            # print(target)
+            if torch.cuda.is_available():
+                feature, target = feature.cuda(), target.cuda()
+            logits = model(feature)
+            loss = F.cross_entropy(logits, target)
+            preds_list.extend(torch.max(logits, 1)
+                         [1].detach().cpu().numpy())
+            target_list.extend(target.detach().cpu().numpy())
 
-    return accuracy
+            avg_loss += loss.item()
+            corrects += (torch.max(logits, 1)
+                         [1].view(target.size()).data == target.data).sum()
+        size = len(dev_iter.dataset)
+        avg_loss /= size
+        accuracy = 100.0 * corrects / size
+        sklearn_f1 = f1_score(target_list, preds_list, average='micro')
+        sklearn_precision = precision_score(target_list, preds_list, average='micro')
+        sklearn_recall = recall_score(target_list, preds_list, average='micro')
+        print(classification_report(target_list, preds_list))
+        conf_matrix = get_confusion_matrix(target_list, preds_list)
+        plot_confusion_matrix(conf_matrix)
+        print('\nEvaluation - loss: {:.6f}  acc: {:.4f}%({}/{}) \n'.format(avg_loss,
+                                                                           accuracy,
+                                                                           corrects,
+                                                                           size))
+
+        return accuracy
+
+def get_confusion_matrix(true, pred):
+    label = [i for i in range(13)]
+    conf_matrix = confusion_matrix(true, pred, labels=label)
+    return conf_matrix
+
+def plot_confusion_matrix(conf_matrix):
+    plt.imshow(conf_matrix, cmap=plt.cm.Blues)
+    indices = range(conf_matrix.shape[0])
+    label = [i for i in range(13)]
+    plt.xticks(indices, label)
+    plt.yticks(indices, label)
+    plt.colorbar()
+    plt.xlabel('y_pred')
+    plt.ylabel('y_true')
+    for first_index in range(conf_matrix.shape[0]):
+        for second_index in range(conf_matrix.shape[1]):
+            plt.text(first_index, second_index, conf_matrix[first_index, second_index])
+    plt.savefig('heatmap_confusion_matrix.jpg')
+    plt.show()
+
 
 import os
 # 定义模型保存函数
 def save(model, save_dir, steps):
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
-    save_path = 'DPCNN_model_steps{}(b64).pt'.format(steps)
+    save_path = 'TEXTCNN_model_steps{}(b64).pt'.format(steps)
     save_bestmodel_path = os.path.join(save_dir, save_path)
     torch.save(model.state_dict(), save_bestmodel_path)
 
@@ -182,36 +217,38 @@ import csv
 
 
 def predict(model, info):
-    model.eval()
-    f = open("./data2/temp_input.tsv", 'w')
-    writer = csv.writer(f, delimiter='\t')
-    writer.writerow([0, '离婚纠纷', info])
-    f.close()
+    with torch.no_grad():
+        model.eval()
+        f = open("./data2/temp_input.tsv", 'w')
+        writer = csv.writer(f, delimiter='\t')
+        writer.writerow([0, '离婚纠纷', info])
+        f.close()
 
-    test_data = TabularDataset(
-        path="./data2/temp_input.tsv",
-        format="tsv",
-        skip_header=False,
-        fields=field
-    )
+        test_data = TabularDataset(
+            path="./data2/temp_input.tsv",
+            format="tsv",
+            skip_header=False,
+            fields=field
+        )
 
-    test_iter = BucketIterator(
-        dataset=test_data,
-        batch_size=1,
-        sort_key=lambda x: len(x.content),
-        sort_within_batch=True,
-        device=torch.device('cpu')
-    )
+        test_iter = BucketIterator(
+            dataset=test_data,
+            batch_size=1,
+            sort_key=lambda x: len(x.content),
+            sort_within_batch=True,
+            device=torch.device('cpu')
+        )
 
-    label = "SOS"
-    for batch in test_iter:
-        # count += 1
-        feature = batch.content
-        logits = model(feature)
-        # print(target)
-        label = label_list[torch.max(logits, 1)[1].detach().numpy()[0]]
+        label = "SOS"
+        for batch in test_iter:
+            # count += 1
+            feature = batch.content
+            logits = model(feature)
+            # print(target)
+            label = label_list[torch.max(logits, 1)[1].detach().numpy()[0]]
 
-    return label
+        return label
+
 
 from bilstm_cause_classify import BiLstm
 
@@ -241,7 +278,8 @@ dpcnn_model = DPCNN(class_num=config.class_num,
                     embedding_dimension=config.embedding_dim,
                     dropout=config.dropout
 )
-
+#bilstm_model.load_state_dict(torch.load('model2/bilstmAtt_model_steps448(b32).pt'))
+#textcnn_model.load_state_dict(torch.load('model/bestmodel_steps200.pt'))
 dpcnn_model.load_state_dict(torch.load('model3/DPCNN_model_steps300(b64).pt'))
-# train(dpcnn_model,train_iter,dev_iter)
+#train(textcnn_model,train_iter,dev_iter)
 dev_eval(dev_iter,dpcnn_model)
